@@ -489,7 +489,7 @@ def go():
         print
         sys.exit(1)
 
-    tagset = corpus2.get_named_tagset(options.tagset)
+    tagset = get_named_tagset(options.tagset)
 
     num_folds = len(args) / 2
 
