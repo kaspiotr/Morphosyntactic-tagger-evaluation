@@ -22,6 +22,7 @@ import corpus2
 from StringIO import StringIO
 from collections import defaultdict as dd
 from corpus2.bin.swig.corpus2 import get_named_tagset
+from corpus2.bin.swig.corpus2 import TokenReader
 
 descr = """%prog [options] TAGDFOLD1 ... REFFOLD1 ...
 
@@ -97,8 +98,8 @@ def tok_seqs(rdr_here, rdr_there, respect_spaces, verbose_mode, debug_mode):
 
     while True:
         num_iter += 1
-        if num_iter % 10000 == 0: print
-        num_iter, 'iterations...'
+        if num_iter % 10000 == 0:
+            print(num_iter, 'iterations...')
         if len(buff_here) > LIMIT or len(buff_there) > LIMIT:
             raise IOError('limit exceeded')
 
@@ -106,17 +107,14 @@ def tok_seqs(rdr_here, rdr_there, respect_spaces, verbose_mode, debug_mode):
         text_there = text(buff_there, respect_spaces)
 
         if debug_mode:
-            print
-            '%s (%d) v. %s(%d)' % (text_here, len(text_here),
-                                   text_there, len(text_there))
+            print('%s (%d) v. %s(%d)' % (text_here, len(text_here), text_there, len(text_there)))
 
         if len(text_here) == len(text_there):
             # already aligned
             if text_here != text_there:
                 # the same text length but different chars
                 # won't recover, flush it as it is
-                print
-                'WARNING: mismatch', text_here, '|', text_there
+                print('WARNING: mismatch', text_here, '|', text_there)
             yield (buff_here, buff_there)
             buff_here = []
             buff_there = []
@@ -250,8 +248,7 @@ class TokComp:
                 newtags.extend(self.tagset.split_tag(tag))
             tags = newtags
             if self.debug:
-                print
-                ' + '.join(self.tagset.tag_to_string(tag) for tag in tags)
+                print(' + '.join(self.tagset.tag_to_string(tag) for tag in tags))
         return set(self.tagset.tag_to_string(tag) for tag in tags)
 
     def lemstrings_of_token(self, tok):
@@ -349,9 +346,7 @@ class TokComp:
             pre_feat_sets[0].update(self.cmp_toks(tag_seq[0], ref_seq[0]))
         else:
             if self.debug:
-                print
-                'SEGCHANGE\t%s\t%s' % (
-                    text(tag_seq, True, True), text(ref_seq, True, True))
+                print('SEGCHANGE\t%s\t%s' % (text(tag_seq, True, True), text(ref_seq, True, True)))
 
             # mark all as subjected to segmentation changes
             for feats in pre_feat_sets:
@@ -406,8 +401,7 @@ class TokComp:
         for feats in pre_feat_sets:
             self.eat_ref_toks(feats, 1)
             if self.debug:
-                print
-                ' - ', ', '.join(sorted(feats))
+                print(' - ', ', '.join(sorted(feats)))
 
     def count_all(self):  # TODO remove
         """Returns the number of all reference tokens."""
@@ -440,19 +434,15 @@ class TokComp:
         return self.percentage_with(metric[0], metric[1])
 
     def dump(self):
-        print
-        '----'
-        print
-        'REF-toks\t%d' % self.ref_toks
+        print('----')
+        print('REF-toks\t%d' % self.ref_toks)
         for m_name in dir(Metric):
             if not m_name.startswith('_'):
                 metric = getattr(Metric, m_name)
-                print
-                '%s\t%.4f%%' % (m_name, self.value_of(metric))
+                print('%s\t%.4f%%' % (m_name, self.value_of(metric)))
         # calc upper bound
         upbound = self.value_of(Metric.WC_LOWER) + self.value_of(Metric.SEG_CHANGE)
-        print
-        'WC_UPPER\t%.4f%%' % upbound
+        print('WC_UPPER\t%.4f%%' % upbound)
 
 
 def go():
@@ -480,14 +470,10 @@ def go():
     (options, args) = parser.parse_args()
 
     if len(args) < 2 or len(args) % 2 != 0:
-        print
-        'You need to provide a series of tagged folds and a coresponding'
-        print
-        'series of reference folds.'
-        print
-        'See --help for details.'
-        print
-        sys.exit(1)
+        print('You need to provide a series of tagged folds and a coresponding')
+        print('series of reference folds.')
+        print('See --help for details.')
+        print(sys.exit(1))
 
     tagset = get_named_tagset(options.tagset)
 
@@ -518,10 +504,9 @@ def go():
         tag_fn = args[fold_idx]  # filename of tagged fold @ fold_idx
         ref_fn = args[fold_idx + num_folds]  # ... reference fold @ fold_idx
         if options.verbose:
-            print
-            '### FOLD %2d: %s (tag) v. %s (ref)' % ((fold_idx + 1), tag_fn, ref_fn)
-        tag_rdr = corpus2.TokenReader.create_path_reader(options.input_format, tagset, tag_fn)
-        ref_rdr = corpus2.TokenReader.create_path_reader(options.input_format, tagset, ref_fn)
+            print('### FOLD %2d: %s (tag) v. %s (ref)' % ((fold_idx + 1), tag_fn, ref_fn))
+        tag_rdr = TokenReader.create_path_reader(options.input_format, tagset, tag_fn)
+        ref_rdr = TokenReader.create_path_reader(options.input_format, tagset, ref_fn)
 
         res = TokComp(
             tagset, options.unk_tag, options.expand_optional,
@@ -529,25 +514,15 @@ def go():
         for tag_seq, ref_seq in tok_seqs(tag_rdr, ref_rdr, options.respect_spaces, options.verbose, options.debug_mode):
             res.update(tag_seq, ref_seq)
 
-        print
-        "PolEval 2017 competition scores"
-        print
-        "-------------------------------"
-        print
-        'POS accuracy (Subtask A score): \t%.4f%%' % res.value_of(Metric.SC_LOWER)
-        print
-        'POS accuracy (known words): \t%.4f%%' % res.value_of(Metric.KN_SC_LOWER)
-        print
-        'POS accuracy (unknown words): \t%.4f%%' % res.value_of(Metric.UNK_SC_LOWER)
-        print
-        'Lemmatization accuracy (Subtask B score): \t%.4f%%' % res.value_of(Metric.SL_LOWER)
-        print
-        'Lemmatization accuracy (known words): \t%.4f%%' % res.value_of(Metric.KN_SL_LOWER)
-        print
-        'Lemmatization accuracy (unknown words): \t%.4f%%' % res.value_of(Metric.UNK_SL_LOWER)
-        print
-        'Overall accuracy (Subtask C score): \t%.4f%%' % (
-                    (res.value_of(Metric.SC_LOWER) + res.value_of(Metric.SL_LOWER)) / 2)
+        print("PolEval 2017 competition scores")
+        print("-------------------------------")
+        print('POS accuracy (Subtask A score): \t%.4f%%' % res.value_of(Metric.SC_LOWER))
+        print('POS accuracy (known words): \t%.4f%%' % res.value_of(Metric.KN_SC_LOWER))
+        print('POS accuracy (unknown words): \t%.4f%%' % res.value_of(Metric.UNK_SC_LOWER))
+        print('Lemmatization accuracy (Subtask B score): \t%.4f%%' % res.value_of(Metric.SL_LOWER))
+        print('Lemmatization accuracy (known words): \t%.4f%%' % res.value_of(Metric.KN_SL_LOWER))
+        print('Lemmatization accuracy (unknown words): \t%.4f%%' % res.value_of(Metric.UNK_SL_LOWER))
+        print('Overall accuracy (Subtask C score): \t%.4f%%' % ((res.value_of(Metric.SC_LOWER) + res.value_of(Metric.SL_LOWER)) / 2))
 
         if options.verbose:
             res.dump()
@@ -573,43 +548,27 @@ def go():
         perc_segchange += res.value_of(Metric.SEG_CHANGE)
 
     # weak lemma -- when sets of possible lemmas output and in ref corp intersect
-    print
-    'AVG weak lemma lower bound\t%.4f%%' % (weak_lem_lower_bound / num_folds)
-    print
-    'AVG KN strong lemma lower bound\t%.4f%%' % (kn_strong_lem_lower_bound / num_folds)
-    print
-    'AVG UNK strong lemma lower bound\t%.4f%%' % (unk_strong_lem_lower_bound / num_folds)
+    print('AVG weak lemma lower bound\t%.4f%%' % (weak_lem_lower_bound / num_folds))
+    print('AVG KN strong lemma lower bound\t%.4f%%' % (kn_strong_lem_lower_bound / num_folds))
+    print('AVG UNK strong lemma lower bound\t%.4f%%' % (unk_strong_lem_lower_bound / num_folds))
     # strong lemma -- when sets of possible lemmas output and in ref corp are equal
-    print
-    'AVG strong lemma lower bound\t%.4f%%' % (strong_lem_lower_bound / num_folds)
-    print
-    'AVG strong lemma nocase lower bound\t%.4f%%' % (strong_lem_nocase_lower_bound / num_folds)
+    print('AVG strong lemma lower bound\t%.4f%%' % (strong_lem_lower_bound / num_folds))
+    print('AVG strong lemma nocase lower bound\t%.4f%%' % (strong_lem_nocase_lower_bound / num_folds))
 
-    print
-    'AVG strong lemma case concat heur\t%.4f%%' % (strong_lem_case_cat_heur / num_folds)
-    print
-    'AVG strong lemma nocase concat heur\t%.4f%%' % (strong_lem_nocase_cat_heur / num_folds)
+    print('AVG strong lemma case concat heur\t%.4f%%' % (strong_lem_case_cat_heur / num_folds))
+    print('AVG strong lemma nocase concat heur\t%.4f%%' % (strong_lem_nocase_cat_heur / num_folds))
 
-    print
-    'AVG weak corr lower bound\t%.4f%%' % (weak_lower_bound / num_folds)
-    print
-    'AVG weak corr upper bound\t%.4f%%' % (weak_upper_bound / num_folds)
+    print('AVG weak corr lower bound\t%.4f%%' % (weak_lower_bound / num_folds))
+    print('AVG weak corr upper bound\t%.4f%%' % (weak_upper_bound / num_folds))
 
-    print
-    'AVG UNK weak corr lower bound\t%.4f%%' % (unk_weak_lower / num_folds)
-    print
-    'AVG UNK weak corr upper bound\t%.4f%%' % (unk_weak_upper / num_folds)
-    print
-    'AVG KN  weak corr lower bound\t%.4f%%' % (kn_weak_lower / num_folds)
-    print
-    'AVG KN  weak corr upper bound\t%.4f%%' % (kn_weak_upper / num_folds)
-    print
-    'AVG POS strong corr lower bound\t%.4f%%' % (strong_pos_lower / num_folds)
+    print('AVG UNK weak corr lower bound\t%.4f%%' % (unk_weak_lower / num_folds))
+    print('AVG UNK weak corr upper bound\t%.4f%%' % (unk_weak_upper / num_folds))
+    print('AVG KN  weak corr lower bound\t%.4f%%' % (kn_weak_lower / num_folds))
+    print('AVG KN  weak corr upper bound\t%.4f%%' % (kn_weak_upper / num_folds))
+    print('AVG POS strong corr lower bound\t%.4f%%' % (strong_pos_lower / num_folds))
 
-    print
-    'AVG percentage UNK\t%.4f%%' % (perc_unk / num_folds)
-    print
-    'AVG percentage seg change\t%.4f%%' % (perc_segchange / num_folds)
+    print('AVG percentage UNK\t%.4f%%' % (perc_unk / num_folds))
+    print('AVG percentage seg change\t%.4f%%' % (perc_segchange / num_folds))
 
 
 if __name__ == '__main__':
